@@ -6,13 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { updateCredits } from "../redux/slices/authSlice";
+import { updateCredits, setUser } from "../redux/slices/authSlice";
 import { GoSidebarCollapse } from "react-icons/go";
 import { GoSidebarExpand } from "react-icons/go";
 import ChatOptionButton from "../components/chatOptionButton/ChatOptionButton";
+import Image from "next/image";
 
-
-
+// http://localhost:3000/api/test-db
 const demoUserName = [
   {
     id: 1,
@@ -40,14 +40,15 @@ const ChatBox = () => {
   const [selectedUser, setSelectedUser] = useState(demoUserName[2]);
   const messageListRef = useRef(null);
   const router = useRouter();
+  const username = useSelector((state) => state.auth.user);
   const { isAuthenticated } = useSelector((state) => state.auth);
   const fileInputRef = useRef(null); // Create a ref for the file input field
   //const dropdownContent = document.getElementById('dropdownContent');
-  const [DropUp,setDropUp] = useState(false);
+  const [DropUp, setDropUp] = useState(false);
 
-  const toggleDropUp = ()=>{
+  const toggleDropUp = () => {
     setDropUp(!DropUp);
-  }
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -74,36 +75,84 @@ const ChatBox = () => {
 
     return formattedText;
   };
+  //fetch old chats 
+  
+  
+
+
+
+
+
+
+
+
+  
   const authToken = useSelector((state) => state.auth.token); // Get the auth token from Redux
   // const flaskBackendUrl = ;
   const dispatch = useDispatch();
   const [selectedFile, setSelectedFile] = useState([]);
   const fetchGeminiResponse = async (message, token) => {
     try {
-      const response = await fetch(
-        `https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/?message=${message}`,
+      // https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/?message=${message}
+      
+      //user Message
+      const userMessage ={
+          sender: "user", 
+          username, 
+          message, 
+          timestamp: Date.now() 
+      }
+      const response = await axios.post(
+        `http://localhost:3000/api/test-db`,
+        { 
+          message: userMessage.message,
+          sender: userMessage.sender,
+          username: userMessage.username
+        },
         {
-          method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${authToken}`, // Include Bearer token
           },
-          body: JSON.stringify({ message }), // Send user message to Flask
         }
       );
+      // Access response data
+      console.log("Inserted",response.data);
+      // dispatch(setUser(response.data)); harsh
 
-      if (response.ok) {
-        const data = await response.json();
-        dispatch(updateCredits({ credits: data.credits_remaining }));
-        return data.response; // Get the response from Flask backend
-      } else {
-        throw new Error("Error fetching response from Flask backend");
-      }
+      // ------------------------------------------------------------------
+      // if (response.ok) {
+      //   const data = await response.json();
+      //   dispatch(updateCredits({ credits: data.credits_remaining }));
+      //   return data.response; // Get the response from Flask backend
+      // } else {
+      //   throw new Error("Error fetching response from Flask backend");
+      // }
+      // ------------------------------------------------------------------
+      // bot reply
+      setTimeout( async()=>{
+
+        const botText = `You said: "${inputValue}". This is a mock response.`;
+        const botReply = {
+          sender: "bot",
+          username,
+          text: botText,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, botReply]);
+        await axios.post("http://localhost:3000/api/test-db", {
+            message: botReply.text,
+            sender: botReply.sender,
+            username: botReply.username,
+        });
+      },800)
+      
     } catch (error) {
       console.error(error);
       return "Sorry, I couldn't get a response. Please try again.";
     }
   };
+  console.log("msg hai ye",messages) // all messages
   const handleUploadImage = async (images, query, token) => {
     const formData = new FormData();
 
@@ -146,8 +195,9 @@ const ChatBox = () => {
 
     setLoading(true);
     try {
+      const endpoint = "http://localhost:8081";
       const response = await axios.post(
-        `https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/report`,
+        `https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/image-analysis?text_query=${query}`,
         null,
         {
           headers: {
@@ -187,11 +237,13 @@ const ChatBox = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    
     if (inputValue.trim() !== "") {
       const newMessage = {
-        text: inputValue,
         sender: "user",
+        username,
+        text: inputValue,
+        timestamp: Date.now(),
         file: selectedFile ? selectedFile.name : null, // Add file name if selected
       };
 
@@ -306,39 +358,7 @@ const ChatBox = () => {
           id="chatbox"
           className={isSideBarOpen ? styles.sideBarOpen : styles.sideBarClose}
         >
-          {/* <aside className={styles.userAsideBar}>
-            <div className={styles.sideBarToggleBtn} onClick={toggleSideBar}>
-              <GoSidebarCollapse size={28} color="#666" />
-            </div>
-            <div className={styles.users}>
-              {demoUserName.length === 0 ? (
-                <p className={styles.noUserMessage}>No user</p>
-              ) : (
-                demoUserName?.map((user, index) => (
-                  <div
-                    key={index}
-                    className={`${styles.userCard} ${
-                      selectedUser.id === user.id ? styles.activeUser : ""
-                    }`}
-                    onClick={() => handleUserSwitch(user)}
-                  >
-                    <UserCard data={user} />
-                  </div>
-                ))
-              )}
-            </div>
-          </aside> */}
           <div className={styles.chatBox}>
-            {/* <div
-              className={
-                isSideBarOpen
-                  ? styles.sideBarToggleBtn
-                  : `${styles.sideBarToggleBtn} ${styles.showSideBar}`
-              }
-              onClick={toggleSideBar}
-            >
-              <GoSidebarExpand size={28} color="#666" />
-            </div> */}
             <div className={styles.messageList} ref={messageListRef}>
               {messages.length === 0 ? (
                 <div className={styles.emptyChat}>
@@ -382,14 +402,16 @@ const ChatBox = () => {
                         : styles.chatbotMessage
                     }`}
                   >
-                    <img
+                    <Image
                       src={
                         message.sender === "user"
-                          ? "./userIcon.png"
-                          : "./chatbot.png"
+                          ? "/userIcon.png"
+                          : "/chatbot.png"
                       }
                       alt={`${message.sender} Icon`}
                       className={styles.messageIcon}
+                      width={10}
+                      height={20}
                     />
                     <div className={styles.message}>
                       {message.isFormatted ? (
@@ -408,9 +430,11 @@ const ChatBox = () => {
                           <div className={styles.message}>
                             <p>{message.text}</p>
                             <div className={styles.fileIconWrapper}>
-                              <img
+                              <Image
                                 src="/pdf.png" // Replace with the path to your file icon
                                 alt="Download File"
+                                width={10}
+                                height={20}
                                 className={styles.fileIcon}
                                 onClick={() => {
                                   const link = document.createElement("a");
@@ -439,7 +463,7 @@ const ChatBox = () => {
             <div className={styles.inputANDbutton}>
               <form onSubmit={handleSubmit} className={styles.inputForm}>
                 {/* <button type="button" className={styles.sendButton}>
-                <img src="./chatBoxFileBtn.png" alt="sendButton" />
+                <Image src="./chatBoxFileBtn.png" alt="sendButton" />
               </button> */}
                 {selectedUser.id === 3 && (
                   <div className={styles.fileInput}>
@@ -451,17 +475,27 @@ const ChatBox = () => {
                     >
                       {selectedFile ? (
                         <span className={styles.fileSelected}>
-                          <img src="./chatBoxFileBtn.png" alt="fileSelected" />{" "}
+                          <Image
+                            src="/chatBoxFileBtn.png"
+                            alt="fileSelected"
+                            width={10}
+                            height={20}
+                          />{" "}
                           {/* Icon indicating a file is selected */}
                           {/*                         <span className="text text-white">1 </span> */}
-                          <img
+                          {/* <Image
                             src="./file_968097.png"
                             alt="fileUploaded"
                             className={styles.fileUploadedIcon}
-                          />
+                          /> */}
                         </span>
                       ) : (
-                        <img src="./chatBoxFileBtn.png" alt="sendButton" />
+                        <Image
+                          src="/chatBoxFileBtn.png"
+                          alt="sendButton"
+                          width={10}
+                          height={20}
+                        />
                       )}
                     </button>
                     <input
@@ -517,46 +551,60 @@ const ChatBox = () => {
 
                 {!loading && (
                   <button type="submit" className={styles.sendButton}>
-                    <img src="./sendBtn.png" alt="sendButton" />
+                    <Image
+                      src="/sendBtn.png"
+                      alt="sendButton"
+                      width={10}
+                      height={20}
+                    />
                   </button>
                 )}
               </form>
               <div className={styles.inputChatbuttonContainer}>
                 <div className={styles.inputChatbuttonHolder}>
-                {demoUserName.map((user, index) => {
-                  return (
-                    <button
-                      className={styles.inputChatbutton}
-                      key={index}
-                      onClick={() => handleUserSwitch(user)}
-                    >
-                      {user.userName}
-                    </button>
-                  );
-                })}</div>
+                  {demoUserName.map((user, index) => {
+                    return (
+                      <button
+                        className={styles.inputChatbutton}
+                        key={index}
+                        onClick={() => handleUserSwitch(user)}
+                      >
+                        {user.userName}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div class={styles.dropup}>
-                  <button  class={styles.dropbtn} onClick={toggleDropUp}>Select</button>
-                  <div class={styles.dropupContent }    style={{
-    // display: DropUp ? 'block' : 'none',
-    opacity: DropUp ? 1 : 0,
-
-    
-  }} id="dropdownContent">
-                <div className={styles.inputChatbuttonHolderMd} style={{display:DropUp?'block':'none'}}>
-                {demoUserName.map((user, index) => {
-                  return (
-                    <button
-                      className={styles.inputChatbuttonMd}
-                      key={index}
-                      onClick={() => {handleUserSwitch(user);
-                        toggleDropUp();
-                      }}
-                      
+                  <button class={styles.dropbtn} onClick={toggleDropUp}>
+                    Select
+                  </button>
+                  <div
+                    class={styles.dropupContent}
+                    style={{
+                      // display: DropUp ? 'block' : 'none',
+                      opacity: DropUp ? 1 : 0,
+                    }}
+                    id="dropdownContent"
+                  >
+                    <div
+                      className={styles.inputChatbuttonHolderMd}
+                      style={{ display: DropUp ? "block" : "none" }}
                     >
-                      {user.userName}
-                    </button>
-                  );
-                })}</div>
+                      {demoUserName.map((user, index) => {
+                        return (
+                          <button
+                            className={styles.inputChatbuttonMd}
+                            key={index}
+                            onClick={() => {
+                              handleUserSwitch(user);
+                              toggleDropUp();
+                            }}
+                          >
+                            {user.userName}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
