@@ -45,7 +45,10 @@ const ChatBox = () => {
   const fileInputRef = useRef(null); // Create a ref for the file input field
   //const dropdownContent = document.getElementById('dropdownContent');
   const [DropUp, setDropUp] = useState(false);
-
+  const authToken = useSelector((state) => state.auth.token); // Get the auth token from Redux
+  // const flaskBackendUrl = ;
+  const dispatch = useDispatch();
+  const [selectedFile, setSelectedFile] = useState([]);
   const toggleDropUp = () => {
     setDropUp(!DropUp);
   };
@@ -75,9 +78,35 @@ const ChatBox = () => {
 
     return formattedText;
   };
+  const hasRun = useRef(false);
   //fetch old chats 
+    useEffect(() => {
+      if (!username) return; // wait until we have it
+
+      const fetchChatMessages = async () => {
+        try {
+          const chatMessages = await axios.get(
+            `http://localhost:3000/api/chat-fetch?username=${username}`
+          );
+          // setUserChats()
+          let history = chatMessages.data.chats;
+          const formatted = history.map((msg) => ({
+            sender: msg.sender,
+            text: msg.messages,
+          }));
+          console.log("Fetched from API:", formatted);
+          setMessages(formatted);
+        } catch (error) {
+          console.log("No data", error);
+        }
+      };
+      if (username) {
+      fetchChatMessages();
+    }
+    
+  }, [username]);
   
-  
+console.log("username", username);
 
 
 
@@ -86,11 +115,7 @@ const ChatBox = () => {
 
 
 
-  
-  const authToken = useSelector((state) => state.auth.token); // Get the auth token from Redux
-  // const flaskBackendUrl = ;
-  const dispatch = useDispatch();
-  const [selectedFile, setSelectedFile] = useState([]);
+
   const fetchGeminiResponse = async (message, token) => {
     try {
       // https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/?message=${message}
@@ -120,16 +145,7 @@ const ChatBox = () => {
       console.log("Inserted",response.data);
       // dispatch(setUser(response.data)); harsh
 
-      // ------------------------------------------------------------------
-      // if (response.ok) {
-      //   const data = await response.json();
-      //   dispatch(updateCredits({ credits: data.credits_remaining }));
-      //   return data.response; // Get the response from Flask backend
-      // } else {
-      //   throw new Error("Error fetching response from Flask backend");
-      // }
-      // ------------------------------------------------------------------
-      // bot reply
+
       setTimeout( async()=>{
 
         const botText = `You said: "${inputValue}". This is a mock response.`;
@@ -146,6 +162,16 @@ const ChatBox = () => {
             username: botReply.username,
         });
       },800)
+            // ------------------------------------------------------------------
+      // if (response.ok) {
+      //   const data = await response.json();
+      //   dispatch(updateCredits({ credits: data.credits_remaining }));
+      //   return data.response; // Get the response from Flask backend
+      // } else {
+      //   throw new Error("Error fetching response from Flask backend");
+      // }
+      // ------------------------------------------------------------------
+      // bot reply
       
     } catch (error) {
       console.error(error);
