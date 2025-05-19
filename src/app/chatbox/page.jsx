@@ -1,4 +1,5 @@
 "use client";
+
 import Head from "next/head";
 import UserCard from "../components/chatUserCard/UserCard";
 import styles from "./chatbox.module.css";
