@@ -82,12 +82,13 @@ const ChatBox = () => {
   const hasRun = useRef(false);
   //fetch old chats 
     useEffect(() => {
-      if (!username) return; // wait until we have it
-
+      
+      if (!username) return; // wait until we have it , this should be uncomment when we store username in cookies bez in cookies no username is stored
+      
       const fetchChatMessages = async () => {
         try {
           const chatMessages = await axios.get(
-            `http://localhost:3000/api/chat-fetch?username=${username}`
+            `${import.meta.env.VITE_NEXT_APP_BACKEND_BASEURL}/api/chat-fetch?username=${username}`
           );
           // setUserChats()
           let history = chatMessages.data.chats;
@@ -95,6 +96,7 @@ const ChatBox = () => {
             sender: msg.sender,
             text: msg.messages,
           }));
+          console.log(username);
           console.log("Fetched from API:", formatted);
           setMessages(formatted);
         } catch (error) {
@@ -124,12 +126,12 @@ console.log("username", username);
       //user Message
       const userMessage ={
           sender: "user", 
-          username, 
+          username,  
           message, 
           timestamp: Date.now() 
       }
       const response = await axios.post(
-        `http://localhost:3000/api/test-db`,
+        `${import.meta.env.VITE_NEXT_APP_BACKEND_BASEURL}/api/test-db`,
         { 
           message: userMessage.message,
           sender: userMessage.sender,
@@ -152,12 +154,12 @@ console.log("username", username);
         const botText = `You said: "${inputValue}". This is a mock response.`;
         const botReply = {
           sender: "bot",
-          username,
+          username:"karan", // rn i am setting username manually but need to fetch from user or user browser cookie
           text: botText,
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, botReply]);
-        await axios.post("http://localhost:3000/api/test-db", {
+        await axios.post(`${import.meta.env.VITE_NEXT_APP_BACKEND_BASEURL}/api/test-db`, {
             message: botReply.text,
             sender: botReply.sender,
             username: botReply.username,
