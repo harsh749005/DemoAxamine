@@ -88,7 +88,7 @@ const ChatBox = () => {
       const fetchChatMessages = async () => {
         try {
           const chatMessages = await axios.get(
-            `${import.meta.env.VITE_NEXT_APP_BACKEND_BASEURL}/api/chat-fetch?username=${username}`
+            `${process.env.NEXT_PUBLIC_BACKEND_BASEURL}/api/chat-fetch?username=${username}`
           );
           // setUserChats()
           let history = chatMessages.data.chats;
@@ -131,7 +131,7 @@ console.log("username", username);
           timestamp: Date.now() 
       }
       const response = await axios.post(
-        `${import.meta.env.VITE_NEXT_APP_BACKEND_BASEURL}/api/test-db`,
+        `${process.env.NEXT_PUBLIC_BACKEND_BASEURL}/api/test-db`,
         { 
           message: userMessage.message,
           sender: userMessage.sender,
@@ -159,7 +159,7 @@ console.log("username", username);
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, botReply]);
-        await axios.post(`${import.meta.env.VITE_NEXT_APP_BACKEND_BASEURL}/api/test-db`, {
+        await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_BASEURL}/api/test-db`, {
             message: botReply.text,
             sender: botReply.sender,
             username: botReply.username,
