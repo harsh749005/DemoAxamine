@@ -154,7 +154,7 @@ console.log("username", username);
         const botText = `You said: "${inputValue}". This is a mock response.`;
         const botReply = {
           sender: "bot",
-          username:"karan", // rn i am setting username manually but need to fetch from user or user browser cookie
+          username, // rn i am setting username manually but need to fetch from user or user browser cookie
           text: botText,
           timestamp: Date.now(),
         };
