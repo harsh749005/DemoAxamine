@@ -1,6 +1,7 @@
 "use client";
 
 import Head from "next/head";
+
 import UserCard from "../components/chatUserCard/UserCard";
 import styles from "./chatbox.module.css";
 import { useEffect, useRef, useState } from "react";
@@ -13,7 +14,7 @@ import { GoSidebarExpand } from "react-icons/go";
 import ChatOptionButton from "../components/chatOptionButton/ChatOptionButton";
 import Image from "next/image";
 
-// http://localhost:3000/api/test-db
+// ${process.env.NEXT_PUBLIC_BACKEND_BASEURL}/api/test-db/api/test-db
 const demoUserName = [
   {
     id: 1,
@@ -83,20 +84,26 @@ const ChatBox = () => {
   //fetch old chats 
     useEffect(() => {
       
-      if (!username) return; // wait until we have it , this should be uncomment when we store username in cookies bez in cookies no username is stored
+      if (!username) return;// wait until we have it , this should be uncomment when we store username in cookies bez in cookies no username is stored
       
       const fetchChatMessages = async () => {
-        try {
-          const chatMessages = await axios.get(
-            `/api/chat-fetch?username=${username}`
+        try { 
+          const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+          const chatMessages = await axios.get( //https://axatest-six.vercel.app/api/chat-fetch?username=
+            
+            `${BASE_URL}/api/chat-fetch?username=${username}`
+            // `https://axatest-six.vercel.app/api/chat-fetch?username=${username}`
+
+
           );
           // setUserChats()
           let history = chatMessages.data.chats;
+          console.log("history che",chatMessages);
           const formatted = history.map((msg) => ({
             sender: msg.sender,
             text: msg.messages,
           }));
-          console.log(username);
+          console.log("ye toh",username);
           console.log("Fetched from API:", formatted);
           setMessages(formatted);
         } catch (error) {
@@ -120,79 +127,59 @@ console.log("username", username);
 
 
   const fetchGeminiResponse = async (message, token) => {
+  
     try {
-      // https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/?message=${message}
-      
-      //user Message
-      const userMessage ={
-          sender: "user", 
-          username,  
-          message, 
-          timestamp: Date.now() 
-      }
-      const response = await axios.post( //${process.env.NEXT_PUBLIC_BACKEND_BASEURL}
-        `/api/test-db`,
-        { 
-          message: userMessage.message,
-          sender: userMessage.sender,
-          username: userMessage.username
-        },
+
+      const response = await fetch(
+        `https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/?message=${message}`,
         {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${authToken}`, // Include Bearer token
           },
+          body: JSON.stringify({ message }), // Send user message to Flask
         }
       );
-      // Access response data
-      console.log("Inserted",response.data);
-      // dispatch(setUser(response.data)); harsh
 
-
-      setTimeout( async()=>{
-
-        const botText = `You said: "${inputValue}". This is a mock response.`;
-        const botReply = {
-          sender: "bot",
-          username, // rn i am setting username manually but need to fetch from user or user browser cookie
-          text: botText,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, botReply]);
-        await axios.post(`/api/test-db`, {
-            message: botReply.text,
-            sender: botReply.sender,
-            username: botReply.username,
-        });
-      },800)
-            // ------------------------------------------------------------------
-      // if (response.ok) {
-      //   const data = await response.json();
-      //   dispatch(updateCredits({ credits: data.credits_remaining }));
-      //   return data.response; // Get the response from Flask backend
-      // } else {
-      //   throw new Error("Error fetching response from Flask backend");
-      // }
-      // ------------------------------------------------------------------
-      // bot reply
+      // const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
+        
+        dispatch(updateCredits({ credits: data.credits_remaining }));
+        return data.response; // Get the response from Flask backend
+      } else {
+        throw new Error("Error fetching response from Flask backend");
+      }
       
     } catch (error) {
-      console.error(error);
-      return "Sorry, I couldn't get a response. Please try again.";
+       if (response) {
+    try {
+      const errorData = await response.json();
+      console.error("Server error:", errorData.error);
+    } catch (jsonError) {
+      console.error("Could not parse error JSON:", jsonError);
+    }
+  } else {
+    console.error("No response received:", error);
+  }
     }
   };
   console.log("msg hai ye",messages) // all messages
+  
   const handleUploadImage = async (images, query, token) => {
+
+// const files = Array.from(e.target.files); 
+
     const formData = new FormData();
 
-    // Append each image to the FormData object
-    images.forEach((image) => {
-      formData.append("images", image);
-    });
-    // formData.append("text_query", query); // Append the query
+  // Append each image
+  images.forEach((image, index) => {
+    formData.append("images", image);
+  });
 
     try {
-      // Make the POST request to the backend API
+
       const response = await axios.post(
         `https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/image-analysis?text_query=${query}`,
         formData,
@@ -203,9 +190,26 @@ console.log("username", username);
           },
         }
       );
+     
+
+      console.log("Image data",response.data);
 
       // Return the response data if successful
       if (response.status === 200) {
+        const botReply = {
+          sender: "bot",
+          username, // rn i am setting username manually but need to fetch from user or user browser cookie
+          text: response.data.response,
+          timestamp: Date.now(),
+        }
+        setMessages((prev) => [...prev, botReply]);
+       const result = await axios.post('api/test-db',{
+          botReply
+           })
+      
+        if (result.status === 200) {
+          console.log("ChatBot Data inserted ");
+        }
         return response.data;
       } else {
         throw new Error(response.data.detail || "Failed to analyze image");
@@ -224,7 +228,7 @@ console.log("username", username);
 
     setLoading(true);
     try {
-      const endpoint = "http://localhost:8081";
+      // const endpoint = "http://localhost:8081";
       const response = await axios.post(
         `https://gate-server-new.salmonsmoke-2ff84997.centralindia.azurecontainerapps.io/chat/image-analysis?text_query=${query}`,
         null,
@@ -268,7 +272,7 @@ console.log("username", username);
     e.preventDefault();
     
     if (inputValue.trim() !== "") {
-      const newMessage = {
+      const userMessage = {
         sender: "user",
         username,
         text: inputValue,
@@ -276,7 +280,18 @@ console.log("username", username);
         file: selectedFile ? selectedFile.name : null, // Add file name if selected
       };
 
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      console.log(userMessage);
+      const response = await axios.post('api/test-db',{
+        userMessage
+      })
+      
+        if (response.status === 200) {
+          alert("Data inserted");
+          // refreshData();
+        }
+
+
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
       setInputValue("");
 
       if (selectedUser.id === 1) {
@@ -290,6 +305,8 @@ console.log("username", username);
             isFormatted: true,
           },
         ]);
+
+
       } else if (selectedUser.id === 2) {
         await handleGenerateReport(inputValue);
       } else if (selectedUser.id === 3) {
